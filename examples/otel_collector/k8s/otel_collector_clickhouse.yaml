@@ -1,0 +1,68 @@
+###
+# CRD OpenTelemetry Collector
+# API https://github.com/open-telemetry/opentelemetry-operator/blob/42a6d6044efaefd568ceeaec2003dbe35ac3d44d/docs/api.md#opentelemetrycollector
+#
+# Config:
+# * receivers - https://github.com/open-telemetry/opentelemetry-collector/tree/main/receiver/otlpreceiver
+# * processors- https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/batchprocessor
+# * exporters:
+#   * logging - https://github.com/open-telemetry/opentelemetry-collector/blob/main/exporter/loggingexporter/README.md
+#   * clickhouse - https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/clickhouseexporter
+# * extensions - https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/extension/healthcheckextension/README.md
+###
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: clickhouse
+  namespace: telemetry
+spec:
+  mode: deployment
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+    
+    processors:
+      batch:
+        timeout: 200ms
+        send_batch_size: 8192
+    
+    exporters:
+      clickhouse:
+        endpoint: tcp://clickhouse:9000?dial_timeout=10s&compress=lz4
+        database: otel
+        username: default
+        password: default
+        ttl_days: 14
+        logs_table_name: otel_logs
+        traces_table_name: otel_traces
+        metrics_table_name: otel_metrics
+        timeout: 5s
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+          max_elapsed_time: 300s
+    
+    extensions:
+      health_check:
+    
+    service:
+      telemetry:
+        logs:
+          level: debug
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          exporters: [clickhouse]
+          processors: [batch]
+        traces:
+          receivers: [otlp]
+          exporters: [clickhouse]
+          processors: [batch]
+        logs:
+          receivers: [otlp]
+          exporters: [clickhouse]
+          processors: [batch]
