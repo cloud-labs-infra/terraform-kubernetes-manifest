@@ -1,4 +1,4 @@
-# Module name
+# Kubernetes manifest
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
